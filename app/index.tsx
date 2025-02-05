@@ -1,7 +1,36 @@
-import { Text, View, TextInput, TouchableOpacity, StyleSheet, SafeAreaView } from "react-native";
-import { Link } from "expo-router";
+import { useEffect } from "react";
+import {
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+} from "react-native";
+import { Link, Redirect } from "expo-router";
+import { useAuthStore } from "./store";
 
 export default function Index() {
+  const { user, isLoading, initialize } = useAuthStore();
+
+  useEffect(() => {
+    initialize();
+  }, []);
+
+  // Show splash screen while checking auth state
+  if (isLoading) {
+    return (
+      <View style={styles.splashContainer}>
+        <Text style={styles.logo}>JobTok</Text>
+        <Text style={styles.tagline}>Share your work journey</Text>
+      </View>
+    );
+  }
+
+  if (user) {
+    return <Redirect href="/(tabs)" />;
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -10,9 +39,10 @@ export default function Index() {
 
       <View style={styles.mainContent}>
         <Text style={styles.title}>Sign up for JobTok</Text>
-        
+
         <Text style={styles.description}>
-          Create a profile, follow other accounts, make your own videos, and more.
+          Create a profile, follow other accounts, make your own videos, and
+          more.
         </Text>
 
         <Link href="/sign-up" asChild>
@@ -45,75 +75,92 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
+  },
+  splashContainer: {
+    flex: 1,
+    backgroundColor: 'black',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+  logo: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#FE2C55',
+  },
+  tagline: {
+    fontSize: 16,
+    color: '#fff',
+    opacity: 0.8,
   },
   header: {
     padding: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   logoText: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
   },
   mainContent: {
     flex: 1,
     padding: 20,
-    justifyContent: 'center',
+    justifyContent: "center",
     gap: 20,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#fff",
+    textAlign: "center",
     marginBottom: 10,
   },
   description: {
     fontSize: 16,
-    color: '#888',
-    textAlign: 'center',
+    color: "#888",
+    textAlign: "center",
     marginBottom: 20,
   },
   signUpButton: {
-    backgroundColor: '#FE2C55',
+    backgroundColor: "#FE2C55",
     height: 44,
     borderRadius: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   socialButton: {
     height: 44,
     borderRadius: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: "#333",
   },
   socialButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#333',
+    borderTopColor: "#333",
   },
   footerText: {
-    color: '#888',
+    color: "#888",
     fontSize: 14,
   },
   loginLink: {
-    color: '#FE2C55',
+    color: "#FE2C55",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

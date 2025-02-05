@@ -58,14 +58,9 @@ export default function TabLayout() {
               <Ionicons name="add" size={size} color="white" />
             </TouchableOpacity>
           ),
-          tabBarButton: (props) => (
-            <TouchableOpacity
-              {...props}
-              onPress={() => {
-                router.push("/create");
-              }}
-            />
-          ),
+          tabBarStyle: {
+            display: "none",
+          },
         }}
       />
 

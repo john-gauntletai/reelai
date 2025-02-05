@@ -65,7 +65,7 @@ export default function Create() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Videos,
       allowsEditing: true,
-      aspect: [9, 16],
+      aspect: [16, 9],
       quality: 1,
     });
 
@@ -77,7 +77,7 @@ export default function Create() {
   };
 
   const handleFlipCamera = () => {
-    setType((current) => (current === "back" ? "front" : "back"));
+    setCameraType((current) => (current === "back" ? "front" : "back"));
   };
 
   const handleToggleFlash = () => {
@@ -90,10 +90,7 @@ export default function Create() {
     setIsRecording(true);
     try {
       const video = await cameraRef.current.recordAsync({
-        maxDuration: 60,
-        quality: "2160p",
-        mute: false,
-        videoBitrate: 5000000,
+        maxDuration: 300,
       });
       console.log("Recording finished:", video.uri);
       // TODO: Navigate to edit screen with recorded video
@@ -127,8 +124,7 @@ export default function Create() {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <SafeAreaView style={styles.container}>
       {isFocused && (
         <CameraView
           ref={cameraRef}
@@ -139,85 +135,99 @@ export default function Create() {
           ratio="16:9"
         >
           {/* Top Controls */}
-          <SafeAreaView style={styles.topControls}>
-            <TouchableOpacity onPress={() => router.back()}>
-              <Ionicons name="close" size={30} color="white" />
-            </TouchableOpacity>
-
-            <View style={styles.topButtonsRow}>
-              <TouchableOpacity style={styles.topButton}>
-                <Ionicons name="musical-notes" size={24} color="white" />
-                <Text style={styles.topButtonText}>Add sound</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={handleToggleFlash}
-                style={styles.topButton}
-              >
+          <View style={styles.topControls}>
+            <View style={styles.topControlsRow}>
+              <TouchableOpacity onPress={() => router.back()}>
                 <Ionicons
-                  name={flash === "off" ? "flash-off" : "flash"}
-                  size={24}
+                  name="close"
+                  size={30}
                   color="white"
+                  style={styles.iconShadow}
                 />
               </TouchableOpacity>
+
+              <TouchableOpacity style={styles.soundBanner}>
+                <Ionicons name="musical-notes" size={20} color="white" />
+                <Text style={styles.soundBannerText}>Add sound</Text>
+              </TouchableOpacity>
+
+              <View style={styles.rightControlsColumn}>
+                <TouchableOpacity style={styles.rightControlButton}>
+                  <Ionicons
+                    name="sync"
+                    size={30}
+                    color="white"
+                    style={styles.iconShadow}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.rightControlButton}
+                  onPress={handleToggleFlash}
+                >
+                  <Ionicons
+                    name={flash === "off" ? "flash-off" : "flash"}
+                    size={30}
+                    color="white"
+                    style={styles.iconShadow}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.rightControlButton}>
+                  <Ionicons
+                    name="timer-outline"
+                    size={30}
+                    color="white"
+                    style={styles.iconShadow}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.rightControlButton}>
+                  <Ionicons
+                    name="color-wand-outline"
+                    size={30}
+                    color="white"
+                    style={styles.iconShadow}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.rightControlButton}>
+                  <Ionicons
+                    name="speedometer-outline"
+                    size={30}
+                    color="white"
+                    style={styles.iconShadow}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
-          </SafeAreaView>
-
-          {/* Right Controls */}
-          <View style={styles.rightControls}>
-            <TouchableOpacity
-              onPress={handleFlipCamera}
-              style={styles.sideButton}
-            >
-              <Ionicons name="camera-reverse" size={28} color="white" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.sideButton}>
-              <Ionicons name="speedometer-outline" size={28} color="white" />
-              <Text style={styles.sideButtonText}>Speed</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.sideButton}>
-              <Ionicons name="timer-outline" size={28} color="white" />
-              <Text style={styles.sideButtonText}>Timer</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.sideButton}>
-              <Ionicons name="color-wand-outline" size={28} color="white" />
-              <Text style={styles.sideButtonText}>Effects</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.sideButton}>
-              <Ionicons name="images-outline" size={28} color="white" />
-              <Text style={styles.sideButtonText}>Filters</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Bottom Controls */}
           <View style={styles.bottomControls}>
             <View style={styles.bottomRow}>
-              <TouchableOpacity
-                style={styles.galleryButton}
-                onPress={pickFromGallery}
-              >
-                <Ionicons name="images" size={28} color="white" />
-                <Text style={styles.galleryText}>Upload</Text>
+              <TouchableOpacity style={styles.effectsButton}>
+                <Ionicons name="apps" size={30} color="white" />
+                <Text style={styles.effectsText}>Templates</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.recordButton, isRecording && styles.recording]}
                 onPress={isRecording ? stopRecording : startRecording}
+                onPressOut={isRecording ? stopRecording : startRecording}
               >
-                <View style={styles.recordButtonInner} />
+                <View style={styles.recordButtonOuter} />
               </TouchableOpacity>
-
-              <TouchableOpacity style={styles.effectsButton}>
-                <Ionicons name="apps" size={28} color="white" />
-                <Text style={styles.effectsText}>Templates</Text>
+              <TouchableOpacity
+                style={styles.galleryButton}
+                onPress={pickFromGallery}
+              >
+                <Ionicons name="images" size={30} color="white" />
+                <Text style={styles.galleryText}>Upload</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.durationRow}>
+            {/* <View style={styles.durationRow}>
               <TouchableOpacity
                 style={[styles.durationOption, { backgroundColor: "#FE2C55" }]}
               >
@@ -229,11 +239,11 @@ export default function Create() {
               <TouchableOpacity style={styles.durationOption}>
                 <Text style={styles.durationText}>3m</Text>
               </TouchableOpacity>
-            </View>
+            </View> */}
           </View>
         </CameraView>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -242,10 +252,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "black",
   },
+  cameraContainer: {
+    flex: 1,
+  },
   camera: {
     flex: 1,
     backgroundColor: "black",
-    aspectRatio: 9 / 16, 
   },
   permissionText: {
     color: "white",
@@ -267,28 +279,35 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   topControls: {
-    flexDirection: "column",
-    padding: 20,
+    width: "100%",
+    paddingTop: 20,
+    paddingHorizontal: 16,
   },
-  topButtonsRow: {
+  topControlsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 20,
+    alignItems: "flex-start",
   },
-  topButton: {
+  soundBanner: {
+    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "rgba(40, 39, 39, 0.3)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 8,
   },
-  topButtonText: {
+  soundBannerText: {
     color: "white",
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 16,
+    fontWeight: "500",
   },
-  rightControls: {
-    position: "absolute",
-    right: 50,
-    top: WINDOW_HEIGHT * 0.3,
+  rightControlsColumn: {
     alignItems: "center",
-    gap: 24,
+    gap: 20,
+  },
+  rightControlButton: {
+    alignItems: "center",
   },
   sideButton: {
     alignItems: "center",
@@ -306,20 +325,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   bottomRow: {
+    width: "100%",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    width: "100%",
     marginBottom: 20,
   },
   durationRow: {
+    width: "100%",
     flexDirection: "row",
+    justifyContent: "center",
     gap: 8,
   },
   durationOption: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 15,
+    borderRadius: 30,
     borderWidth: 1,
     borderColor: "white",
   },
@@ -328,24 +349,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   recordButton: {
-    width: 80,
-    height: 80,
+    width: 62,
+    height: 62,
     borderRadius: 40,
     backgroundColor: "#FE2C55",
     justifyContent: "center",
     alignItems: "center",
   },
-  recordButtonInner: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 4,
+  recordButtonOuter: {
+    width: 75,
+    height: 75,
+    borderRadius: 40,
+    borderWidth: 5,
     borderColor: "white",
   },
   recording: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: 55,
+    height: 55,
+    borderRadius: 10,
   },
   galleryButton: {
     alignItems: "center",
@@ -362,5 +383,15 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 12,
     marginTop: 4,
+  },
+  iconShadow: {
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5, // for Android
   },
 });
