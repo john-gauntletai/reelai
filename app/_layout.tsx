@@ -1,39 +1,65 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
+import { Stack } from 'expo-router/stack';
 import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { View, Text, StyleSheet } from 'react-native';
+import { useAuthStore } from './store';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
-
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
+export default function Layout() {
+  const { user, isLoading, initialize } = useAuthStore();
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
+    initialize();
+  }, []);
 
-  if (!loaded) {
-    return null;
+  // Show splash screen while checking auth state
+  if (isLoading) {
+    return (
+      <View style={styles.splashContainer}>
+        <Text style={styles.logo}>JobTok</Text>
+        <Text style={styles.tagline}>Share your work journey</Text>
+      </View>
+    );
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <Stack screenOptions={{ headerShown: false }}>
+      {!user ? (
+        <>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="sign-in" />
+          <Stack.Screen name="sign-up" />
+        </>
+      ) : (
+        <>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen 
+            name="create"
+            options={{
+              presentation: 'fullScreenModal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+        </>
+      )}
+    </Stack>
   );
 }
+
+const styles = StyleSheet.create({
+  splashContainer: {
+    flex: 1,
+    backgroundColor: 'black',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+  logo: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#FE2C55',
+  },
+  tagline: {
+    fontSize: 16,
+    color: '#fff',
+    opacity: 0.8,
+  },
+});
