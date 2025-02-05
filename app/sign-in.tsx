@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Text, View, TextInput, TouchableOpacity, StyleSheet, SafeAreaView } from "react-native";
+import { Text, View, TextInput, TouchableOpacity, SafeAreaView } from "react-native";
 import { router } from "expo-router";
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, getFirestore, setDoc } from 'firebase/firestore';
@@ -40,16 +40,21 @@ export default function SignIn() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Text style={styles.backButtonText}>←</Text>
+    <SafeAreaView className="flex-1 bg-black">
+      <TouchableOpacity 
+        className="p-5"
+        onPress={() => router.back()}
+      >
+        <Text className="text-white text-2xl">←</Text>
       </TouchableOpacity>
 
-      <View style={styles.content}>
-        <Text style={styles.title}>Log in</Text>
+      <View className="flex-1 px-5 gap-5">
+        <Text className="text-2xl font-bold text-white mb-5 text-center">
+          Log in
+        </Text>
         
         <TextInput
-          style={styles.input}
+          className="h-11 border-b border-b-zinc-700 text-white text-base"
           placeholder="Email"
           placeholderTextColor="#666"
           value={email}
@@ -59,7 +64,7 @@ export default function SignIn() {
         />
 
         <TextInput
-          style={styles.input}
+          className="h-11 border-b border-b-zinc-700 text-white text-base"
           placeholder="Password"
           placeholderTextColor="#666"
           value={password}
@@ -67,81 +72,29 @@ export default function SignIn() {
           secureTextEntry
         />
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {error ? (
+          <Text className="text-[#FE2C55] text-sm">
+            {error}
+          </Text>
+        ) : null}
 
         <TouchableOpacity 
-          style={[styles.loginButton, (!email || !password) && styles.disabledButton]}
+          className={`h-11 rounded bg-[#FE2C55] justify-center items-center mt-5 
+            ${(!email || !password) ? 'opacity-50' : ''}`}
           onPress={handleSignIn}
           disabled={!email || !password}
         >
-          <Text style={styles.buttonText}>Log in</Text>
+          <Text className="text-white text-base font-semibold">
+            Log in
+          </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.forgotPassword}>
-          <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+        <TouchableOpacity className="items-center mt-5">
+          <Text className="text-[#FE2C55] text-sm">
+            Forgot password?
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  backButton: {
-    padding: 20,
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 24,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    gap: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  input: {
-    height: 44,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-    color: '#fff',
-    fontSize: 16,
-  },
-  loginButton: {
-    backgroundColor: '#FE2C55',
-    height: 44,
-    borderRadius: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  errorText: {
-    color: '#FE2C55',
-    fontSize: 14,
-  },
-  forgotPassword: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  forgotPasswordText: {
-    color: '#FE2C55',
-    fontSize: 14,
-  },
-}); 
+} 

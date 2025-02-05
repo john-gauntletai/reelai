@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Link, Redirect } from "expo-router";
 import { useAuthStore } from "./store";
+import "../global.css";
 
 export default function Index() {
   const { user, isLoading, initialize } = useAuthStore();

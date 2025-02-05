@@ -5,6 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  Modal,
+  FlatList,
+  Image,
 } from "react-native";
 import {
   CameraView,
@@ -31,7 +34,8 @@ export default function Create() {
   const [hasAudioPermission, setHasAudioPermission] = useState(false);
   const [hasGalleryPermission, setHasGalleryPermission] = useState(false);
 
-  const [galleryItems, setGalleryItems] = useState<any[]>([]);
+  const [isMediaPickerVisible, setIsMediaPickerVisible] = useState(false);
+  const [selectedVideos, setSelectedVideos] = useState<MediaLibrary.Asset[]>([]);
   const [cameraType, setCameraType] = useState<CameraType>("back");
   const [flash, setFlash] = useState<FlashMode>("off");
   const [isRecording, setIsRecording] = useState(false);
@@ -48,20 +52,29 @@ export default function Create() {
     const galleryStatus =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
+    if (galleryStatus.status === 'granted') {
+      const media = await MediaLibrary.getAssetsAsync({
+        mediaType: 'video',
+        sortBy: ['creationTime'],
+      });
+      // setGalleryItems(media.assets);
+    }
+
     setHasCameraPermission(cameraStatus.status === "granted");
     setHasAudioPermission(audioStatus.status === "granted");
     setHasGalleryPermission(galleryStatus.status === "granted");
-
+    console.log('permissions granted', hasCameraPermission, hasAudioPermission, hasGalleryPermission);
     if (galleryStatus.status === "granted") {
-      const userGalleryMedia = await MediaLibrary.getAssetsAsync({
-        sortBy: ["creationTime"],
-        mediaType: "video",
-      });
-      setGalleryItems(userGalleryMedia.assets);
+      // const userGalleryMedia = await MediaLibrary.getAssetsAsync({
+      //   sortBy: ["creationTime"],
+      //   mediaType: "video",
+      // });
+      // setGalleryItems(userGalleryMedia.assets);
     }
   };
 
   const pickFromGallery = async () => {
+    console.log('pickFromGallery');
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Videos,
       allowsEditing: true,
@@ -84,27 +97,15 @@ export default function Create() {
     setFlash((current) => (current === "off" ? "on" : "off"));
   };
 
-  const startRecording = async () => {
-    if (!isCameraReady || !cameraRef.current) return;
-
+  const recordVideo = async () => {
+    if (isRecording) {
+      setIsRecording(false);
+      cameraRef.current?.stopRecording();
+      return;
+    }
     setIsRecording(true);
-    try {
-      const video = await cameraRef.current.recordAsync({
-        maxDuration: 300,
-      });
-      console.log("Recording finished:", video.uri);
-      // TODO: Navigate to edit screen with recorded video
-      // router.push({ pathname: '/edit', params: { uri: video.uri } });
-    } catch (error) {
-      console.error("Recording failed:", error);
-    }
-    setIsRecording(false);
-  };
-
-  const stopRecording = () => {
-    if (isRecording && cameraRef.current) {
-      cameraRef.current.stopRecording();
-    }
+    const video = await cameraRef.current?.recordAsync();
+    
   };
 
   if (!hasCameraPermission || !hasAudioPermission || !hasGalleryPermission) {
@@ -123,10 +124,27 @@ export default function Create() {
     );
   }
 
+  const handleVideoSelect = (video: MediaLibrary.Asset) => {
+    setSelectedVideos((prev) => {
+      const isAlreadySelected = prev.some((v) => v.id === video.id);
+      if (isAlreadySelected) {
+        return prev.filter((v) => v.id !== video.id);
+      }
+      return [...prev, video];
+    });
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      <MediaPickerModal
+        visible={isMediaPickerVisible}
+        onClose={() => setIsMediaPickerVisible(false)}
+        onSelect={handleVideoSelect}
+        selectedVideos={selectedVideos}
+      />
       {isFocused && (
         <CameraView
+          mode="video"
           ref={cameraRef}
           style={styles.camera}
           facing={cameraType}
@@ -191,6 +209,18 @@ export default function Create() {
                   />
                 </TouchableOpacity>
 
+                <TouchableOpacity 
+                  style={styles.rightControlButton}
+                  onPress={() => setIsMediaPickerVisible(true)}
+                >
+                  <Ionicons
+                    name="images-outline"
+                    size={30}
+                    color="white"
+                    style={styles.iconShadow}
+                  />
+                </TouchableOpacity>
+
                 <TouchableOpacity style={styles.rightControlButton}>
                   <Ionicons
                     name="speedometer-outline"
@@ -213,8 +243,7 @@ export default function Create() {
 
               <TouchableOpacity
                 style={[styles.recordButton, isRecording && styles.recording]}
-                onPress={isRecording ? stopRecording : startRecording}
-                onPressOut={isRecording ? stopRecording : startRecording}
+                onPress={recordVideo}
               >
                 <View style={styles.recordButtonOuter} />
               </TouchableOpacity>
@@ -247,10 +276,185 @@ export default function Create() {
   );
 }
 
+const MediaPickerModal = ({ visible, onClose, onSelect, selectedVideos }) => {
+  const [galleryItems, setGalleryItems] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAssets = async () => {
+      try {
+        const { status } = await MediaLibrary.requestPermissionsAsync();
+        if (status === 'granted') {
+          const assets = await MediaLibrary.getAssetsAsync({
+            mediaType: 'video',
+            sortBy: ['creationTime'],
+            first: 50,  // Limit to first 50 videos for better performance
+          });
+          console.log('assets',assets);
+          // Get thumbnails for all assets
+          const assetsWithThumbnails = await Promise.all(
+            assets.assets.map(async (asset) => {
+              const assetInfo = await MediaLibrary.getAssetInfoAsync(asset);
+              return { ...asset, thumbnail: assetInfo.localUri };
+            })
+          );
+          if (isMounted) {
+            setGalleryItems(assetsWithThumbnails);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading media assets:', error);
+      }
+    };
+
+    if (visible) {
+      loadAssets();
+    } else {
+      // Clear gallery items when modal is closed
+      setGalleryItems([]);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [visible]);
+
+  const renderItem = ({ item }: { item: MediaLibrary.Asset }) => {
+    const isSelected = selectedVideos.some((video) => video.id === item.id);
+    console.log(item);
+    return (
+      <TouchableOpacity
+        style={[styles.mediaItem, isSelected && styles.selectedMediaItem]}
+        onPress={() => onSelect(item)}
+      >
+        <Image
+          source={{ uri: item.uri }}
+          style={styles.mediaItemImage}
+        />
+        <View style={styles.durationContainer}>
+          <Text style={styles.durationText}>
+            {Math.floor(item.duration)}s
+          </Text>
+        </View>
+        {isSelected && (
+          <View style={styles.selectionBadge}>
+            <Text style={styles.selectionNumber}>
+              {selectedVideos.findIndex((video) => video.id === item.id) + 1}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+    >
+      <SafeAreaView style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={onClose}>
+            <Text style={styles.closeButton}>Cancel</Text>
+          </TouchableOpacity>
+          <Text style={styles.modalTitle}>Select Videos</Text>
+          <TouchableOpacity
+            onPress={() => {
+              // Handle next step here
+              onClose();
+            }}
+          >
+            <Text style={styles.nextButton}>
+              Next {selectedVideos.length > 0 ? `(${selectedVideos.length})` : ''}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <FlatList
+          data={galleryItems}
+          renderItem={renderItem}
+          numColumns={3}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.mediaGrid}
+        />
+      </SafeAreaView>
+    </Modal>
+  );
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "black",
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  closeButton: {
+    fontSize: 16,
+    color: '#333',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  nextButton: {
+    fontSize: 16,
+    color: '#FF0050',
+  },
+  mediaGrid: {
+    padding: 2,
+  },
+  mediaItem: {
+    flex: 1/3,
+    aspectRatio: 1,
+    padding: 1,
+    position: 'relative',
+  },
+  mediaItemImage: {
+    flex: 1,
+    backgroundColor: '#eee',
+  },
+  selectedMediaItem: {
+    opacity: 0.7,
+  },
+  durationContainer: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 4,
+    borderRadius: 4,
+  },
+  durationText: {
+    color: 'white',
+    fontSize: 12,
+  },
+  selectionBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FF0050',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectionNumber: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   cameraContainer: {
     flex: 1,
@@ -364,8 +568,8 @@ const styles = StyleSheet.create({
     borderColor: "white",
   },
   recording: {
-    width: 55,
-    height: 55,
+    width: 45,
+    height: 45,
     borderRadius: 10,
   },
   galleryButton: {
