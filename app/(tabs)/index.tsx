@@ -3,8 +3,10 @@ import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { useState, useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+import { router } from 'expo-router';
+import { useAuthStore } from '../store';
 
 const { width, height } = Dimensions.get('window');
 const videoHeight = height - 54;
@@ -17,13 +19,15 @@ interface VideoPost {
   createdAt: any;
   likes: number;
   views: number;
+  originalVideoId?: string; // if the video is a submission
 }
 
-export default function HomeScreen() {
+export default function HomeFeed() {
   const [videos, setVideos] = useState<VideoPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
   const videoRefs = useRef<{ [key: string]: Video }>({});
+  const { user } = useAuthStore();
 
   useEffect(() => {
     fetchVideos();
@@ -41,7 +45,7 @@ export default function HomeScreen() {
       const videosData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as VideoPost[];
+      })).filter((video) => !video.originalVideoId) as VideoPost[];
 
       setVideos(videosData);
     } catch (error) {
@@ -57,6 +61,24 @@ export default function HomeScreen() {
     // If video reaches end, loop it
     if (status.didJustFinish) {
       videoRefs.current[videoId]?.replayAsync();
+    }
+  };
+
+  const handleSubmissionsPress = (video: VideoPost) => {
+    if (video.userId === user?.uid) {
+      // If user is the creator, show submissions page
+      router.push({
+        pathname: '/submissions',
+        params: { videoId: video.id }
+      });
+    } else {
+      // If user is not the creator, go to create page with submission context
+      router.push({
+        pathname: '/create',
+        params: { 
+          originalVideoId: video.id
+        }
+      });
     }
   };
 
@@ -77,34 +99,45 @@ export default function HomeScreen() {
           {/* Right sidebar */}
           <View style={styles.rightSidebar}>
             <TouchableOpacity style={styles.sidebarButton}>
-              <Ionicons name="heart" size={35} color="rgba(255, 255, 255, 0.9)" style={styles.iconShadow} />
+              <Ionicons name="heart" size={35} color="rgba(255, 255, 255, 0.9)" style={styles.rightIcon} />
               <Text style={styles.sidebarText}>{item.likes || 0}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.sidebarButton}>
-              <Ionicons name="chatbubble-ellipses" size={35} color="rgba(255, 255, 255, 0.9)" style={styles.iconShadow} />
+              <Ionicons name="chatbubble-ellipses" size={35} color="rgba(255, 255, 255, 0.9)" style={styles.rightIcon} />
               <Text style={styles.sidebarText}>{item.comments || 0}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.sidebarButton}>
-              <Ionicons name="bookmark" size={35} color="rgba(255, 255, 255, 0.9)" style={styles.iconShadow} />
+              <Ionicons name="bookmark" size={35} color="rgba(255, 255, 255, 0.9)" style={styles.rightIcon} />
               <Text style={styles.sidebarText}>{item.saves || 0}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.sidebarButton}>
-              <Ionicons name="arrow-redo" size={35} color="rgba(255, 255, 255, 0.9)" style={styles.iconShadow} />
-              <Text style={styles.sidebarText}>Share</Text>
+              <Ionicons name="arrow-redo" size={35} style={styles.rightIcon} />
+              <Text style={styles.sidebarText}>{item.shares || 0}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.sidebarButton}>
-              <Ionicons name="paper-plane" size={35} color="rgba(255, 255, 255, 0.9)" style={styles.iconShadow} />
-              <Text style={styles.sidebarText}>Apply</Text>
+            <TouchableOpacity 
+              style={styles.sidebarButton}
+              onPress={() => handleSubmissionsPress(item)}
+            >
+              <Ionicons 
+                name="logo-usd" 
+                size={35} 
+                style={[
+                  styles.rightIcon,
+                  item.userId === user?.uid && styles.activeIcon
+                ]} 
+              />
+              <Text style={styles.sidebarText}>{item.applications || 0}</Text>
             </TouchableOpacity>
+
           </View>
 
           {/* Bottom content */}
           <View style={styles.bottomContent}>
-            <Text style={styles.username}>@user_{item.userId.slice(0, 8)}</Text>
+            <Text style={styles.username}>@{item.userId.slice(0, 8)}</Text>
             <Text style={styles.description}>{item.description || 'No description'}</Text>
           </View>
         </View>
@@ -192,7 +225,6 @@ const styles = StyleSheet.create({
     width: 80,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
   },
   sidebarButton: {
     alignItems: 'center',
@@ -221,9 +253,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 20,
   },
-  iconShadow: {
+  rightIcon: {
+    color: 'rgba(255, 255, 255, 0.9)',
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 5,
+  },
+  activeIcon: {
+    color: '#FE2C55',
   },
 });

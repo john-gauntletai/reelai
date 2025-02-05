@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,22 +8,34 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { app, auth, storage, db } from '../../firebaseConfig';
-import { Ionicons } from '@expo/vector-icons';
+} from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  increment,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
+import { app, auth, storage, db } from "../firebaseConfig";
+import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Video } from "expo-av";
 
 export default function SavePost() {
-  const { uri } = useLocalSearchParams<{ uri: string }>();
-  const [description, setDescription] = useState('');
+  const { uri, originalVideoId } = useLocalSearchParams<{
+    uri: string;
+    originalVideoId?: string;
+  }>();
+  const [description, setDescription] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const handlePost = async () => {
     if (!auth.currentUser) {
-      console.error('User not authenticated');
+      console.error("User not authenticated");
       return;
     }
 
@@ -38,58 +50,77 @@ export default function SavePost() {
 
       const uploadTask = uploadBytesResumable(storageRef, blob);
 
-      // Listen to upload progress
-      uploadTask.on('state_changed', 
+      uploadTask.on(
+        "state_changed",
         (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          const progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
           setUploadProgress(progress);
         },
         (error) => {
-          console.error('Upload error:', error);
+          console.error("Upload error:", error);
           setUploading(false);
         },
         async () => {
-          // Upload completed successfully
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          console.log('Video uploaded:', downloadURL);
 
-          // Create Firestore entry
-          await addDoc(collection(db, 'videos'), {
+          // Create base video data
+          const videoData = {
             userId: auth.currentUser.uid,
             videoUrl: downloadURL,
             description,
             createdAt: serverTimestamp(),
             likes: 0,
-            views: 0
-          });
+            views: 0,
+            shares: 0,
+            comments: 0,
+          };
 
-          console.log('Video uploaded and Firestore entry created');
+          // If this is a submission, add submission-specific fields
+          if (originalVideoId) {
+            Object.assign(videoData, {
+              originalVideoId,
+              status: "pending",
+              type: "submission",
+            });
+          }
+
+          await addDoc(collection(db, "videos"), videoData);
+          if (originalVideoId) {
+            await updateDoc(doc(db, "videos", originalVideoId), {
+              submissions: increment(1),
+            });
+          }
           setUploading(false);
-          router.push('/');
+          router.push("/");
         }
       );
     } catch (error) {
-      console.error('Error uploading video:', error);
+      console.error("Error uploading video:", error);
       setUploading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Post</Text>
+        <Text style={styles.headerTitle}>
+          {originalVideoId ? "Submit Job Application" : "New Post"}
+        </Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView style={styles.content}>
         <View style={styles.previewContainer}>
-          <Image 
-            source={{ uri }} 
+          <Video
+            source={{ uri }}
             style={styles.videoPreview}
             resizeMode="cover"
+            shouldPlay={false}
+            isMuted={true}
           />
           <View style={styles.descriptionContainer}>
             <TextInput
@@ -108,25 +139,40 @@ export default function SavePost() {
           <TouchableOpacity style={styles.optionItem}>
             <Ionicons name="location-outline" size={24} color="black" />
             <Text style={styles.optionText}>Location</Text>
-            <Ionicons name="chevron-forward" size={24} color="#999" style={styles.optionArrow} />
+            <Ionicons
+              name="chevron-forward"
+              size={24}
+              color="#999"
+              style={styles.optionArrow}
+            />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.optionItem}>
             <Ionicons name="link-outline" size={24} color="black" />
             <Text style={styles.optionText}>Add link</Text>
-            <Ionicons name="chevron-forward" size={24} color="#999" style={styles.optionArrow} />
+            <Ionicons
+              name="chevron-forward"
+              size={24}
+              color="#999"
+              style={styles.optionArrow}
+            />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.optionItem}>
             <Ionicons name="globe-outline" size={24} color="black" />
             <Text style={styles.optionText}>Everyone can view this post</Text>
-            <Ionicons name="chevron-forward" size={24} color="#999" style={styles.optionArrow} />
+            <Ionicons
+              name="chevron-forward"
+              size={24}
+              color="#999"
+              style={styles.optionArrow}
+            />
           </TouchableOpacity>
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.postButton}
           disabled={uploading}
           onPress={handlePost}
@@ -134,41 +180,42 @@ export default function SavePost() {
           {uploading ? (
             <View style={styles.uploadingContainer}>
               <ActivityIndicator color="white" />
-              <Text style={styles.uploadingText}>{Math.round(uploadProgress)}%</Text>
+              <Text style={styles.uploadingText}>
+                {Math.round(uploadProgress)}%
+              </Text>
             </View>
           ) : (
             <Text style={styles.postButtonText}>Post</Text>
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingTop: 60,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   content: {
     flex: 1,
   },
   previewContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 16,
     gap: 12,
   },
@@ -176,25 +223,25 @@ const styles = StyleSheet.create({
     width: 100,
     height: 150,
     borderRadius: 8,
-    backgroundColor: '#eee',
+    backgroundColor: "#eee",
   },
   descriptionContainer: {
     flex: 1,
   },
   descriptionInput: {
     fontSize: 16,
-    color: '#000',
-    textAlignVertical: 'top',
+    color: "#000",
+    textAlignVertical: "top",
   },
   optionsContainer: {
     paddingHorizontal: 16,
   },
   optionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   optionText: {
     flex: 1,
@@ -202,32 +249,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   optionArrow: {
-    marginLeft: 'auto',
+    marginLeft: "auto",
   },
   footer: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: "#eee",
   },
   postButton: {
-    backgroundColor: '#FF2B55',
+    backgroundColor: "#FF2B55",
     paddingVertical: 12,
     borderRadius: 22,
-    alignItems: 'center',
+    alignItems: "center",
   },
   postButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   uploadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   uploadingText: {
-    color: 'white',
+    color: "white",
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });

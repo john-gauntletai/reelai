@@ -49,6 +49,7 @@ export default function TabLayout() {
                 borderRadius: 8,
                 justifyContent: 'center',
                 alignItems: 'center',
+                marginTop: 10,
               }}
               onPress={() => {
                 // Prevent navigation and handle camera modal

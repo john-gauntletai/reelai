@@ -20,27 +20,39 @@ import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "expo-router";
+import { useAuthStore } from "../store";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { db, storage } from "../../firebaseConfig";
 
 const { height: WINDOW_HEIGHT } = Dimensions.get("window");
 
 export default function Create() {
   const navigation = useNavigation();
   const isFocused = navigation.isFocused();
+  const { originalVideoId } = useLocalSearchParams<{
+    originalVideoId?: string;
+  }>();
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const [hasAudioPermission, setHasAudioPermission] = useState(false);
   const [hasGalleryPermission, setHasGalleryPermission] = useState(false);
 
   const [isMediaPickerVisible, setIsMediaPickerVisible] = useState(false);
-  const [selectedVideos, setSelectedVideos] = useState<MediaLibrary.Asset[]>([]);
+  const [selectedVideos, setSelectedVideos] = useState<MediaLibrary.Asset[]>(
+    []
+  );
   const [cameraType, setCameraType] = useState<CameraType>("back");
   const [flash, setFlash] = useState<FlashMode>("off");
   const [isRecording, setIsRecording] = useState(false);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const cameraRef = useRef<CameraView>(null);
+  const { user } = useAuthStore();
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     requestPermissions();
@@ -52,10 +64,10 @@ export default function Create() {
     const galleryStatus =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (galleryStatus.status === 'granted') {
+    if (galleryStatus.status === "granted") {
       const media = await MediaLibrary.getAssetsAsync({
-        mediaType: 'video',
-        sortBy: ['creationTime'],
+        mediaType: "video",
+        sortBy: ["creationTime"],
       });
       // setGalleryItems(media.assets);
     }
@@ -73,7 +85,6 @@ export default function Create() {
   };
 
   const pickFromGallery = async () => {
-    console.log('pickFromGallery');
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Videos,
       allowsEditing: true,
@@ -82,9 +93,13 @@ export default function Create() {
     });
 
     if (!result.canceled) {
-      console.log("Selected video:", result.assets[0].uri);
-      // TODO: Navigate to edit screen with selected video
-      // router.push({ pathname: '/edit', params: { uri: result.assets[0].uri } });
+      router.push({
+        pathname: "/edit",
+        params: {
+          uri: result.assets[0].uri,
+          originalVideoId: originalVideoId, // Pass along the originalVideoId if it exists
+        },
+      });
     }
   };
 
@@ -106,7 +121,13 @@ export default function Create() {
     const video = await cameraRef.current?.recordAsync();
     if (video) {
       console.log("Recording finished:", video.uri);
-      router.push({ pathname: '/edit', params: { uri: video.uri } });
+      router.push({
+        pathname: "/edit",
+        params: {
+          uri: video.uri,
+          originalVideoId: originalVideoId, // Pass along the originalVideoId if it exists
+        },
+      });
     }
   };
 
@@ -157,22 +178,25 @@ export default function Create() {
           {/* Top Controls */}
           <View style={styles.topControls}>
             <View style={styles.topControlsRow}>
-              <TouchableOpacity onPress={() => router.back()}>
-                <Ionicons
-                  name="close"
-                  size={30}
-                  color="white"
-                  style={styles.iconShadow}
-                />
-              </TouchableOpacity>
-
+              {originalVideoId ? (
+                <TouchableOpacity onPress={() => router.back()}>
+                  <Ionicons name="arrow-back" size={24} color="white" />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity onPress={() => router.back()}>
+                  <Ionicons name="close" size={24} color="white" />
+                </TouchableOpacity>
+              )}
               <TouchableOpacity style={styles.soundBanner}>
                 <Ionicons name="musical-notes" size={20} color="white" />
                 <Text style={styles.soundBannerText}>Add sound</Text>
               </TouchableOpacity>
 
               <View style={styles.rightControlsColumn}>
-                <TouchableOpacity style={styles.rightControlButton} onPress={handleFlipCamera}>
+                <TouchableOpacity
+                  style={styles.rightControlButton}
+                  onPress={handleFlipCamera}
+                >
                   <Ionicons
                     name="sync"
                     size={30}
@@ -211,7 +235,7 @@ export default function Create() {
                   />
                 </TouchableOpacity>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.rightControlButton}
                   onPress={() => setIsMediaPickerVisible(true)}
                 >
@@ -287,13 +311,13 @@ const MediaPickerModal = ({ visible, onClose, onSelect, selectedVideos }) => {
     const loadAssets = async () => {
       try {
         const { status } = await MediaLibrary.requestPermissionsAsync();
-        if (status === 'granted') {
+        if (status === "granted") {
           const assets = await MediaLibrary.getAssetsAsync({
-            mediaType: 'video',
-            sortBy: ['creationTime'],
-            first: 50,  // Limit to first 50 videos for better performance
+            mediaType: "video",
+            sortBy: ["creationTime"],
+            first: 50, // Limit to first 50 videos for better performance
           });
-          console.log('assets',assets);
+          console.log("assets", assets);
           // Get thumbnails for all assets
           const assetsWithThumbnails = await Promise.all(
             assets.assets.map(async (asset) => {
@@ -306,7 +330,7 @@ const MediaPickerModal = ({ visible, onClose, onSelect, selectedVideos }) => {
           }
         }
       } catch (error) {
-        console.error('Error loading media assets:', error);
+        console.error("Error loading media assets:", error);
       }
     };
 
@@ -330,14 +354,9 @@ const MediaPickerModal = ({ visible, onClose, onSelect, selectedVideos }) => {
         style={[styles.mediaItem, isSelected && styles.selectedMediaItem]}
         onPress={() => onSelect(item)}
       >
-        <Image
-          source={{ uri: item.uri }}
-          style={styles.mediaItemImage}
-        />
+        <Image source={{ uri: item.uri }} style={styles.mediaItemImage} />
         <View style={styles.durationContainer}>
-          <Text style={styles.durationText}>
-            {Math.floor(item.duration)}s
-          </Text>
+          <Text style={styles.durationText}>{Math.floor(item.duration)}s</Text>
         </View>
         {isSelected && (
           <View style={styles.selectionBadge}>
@@ -369,7 +388,8 @@ const MediaPickerModal = ({ visible, onClose, onSelect, selectedVideos }) => {
             }}
           >
             <Text style={styles.nextButton}>
-              Next {selectedVideos.length > 0 ? `(${selectedVideos.length})` : ''}
+              Next{" "}
+              {selectedVideos.length > 0 ? `(${selectedVideos.length})` : ""}
             </Text>
           </TouchableOpacity>
         </View>
@@ -392,71 +412,71 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   closeButton: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   modalTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   nextButton: {
     fontSize: 16,
-    color: '#FF0050',
+    color: "#FF0050",
   },
   mediaGrid: {
     padding: 2,
   },
   mediaItem: {
-    flex: 1/3,
+    flex: 1 / 3,
     aspectRatio: 1,
     padding: 1,
-    position: 'relative',
+    position: "relative",
   },
   mediaItemImage: {
     flex: 1,
-    backgroundColor: '#eee',
+    backgroundColor: "#eee",
   },
   selectedMediaItem: {
     opacity: 0.7,
   },
   durationContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 4,
     right: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     padding: 4,
     borderRadius: 4,
   },
   durationText: {
-    color: 'white',
+    color: "white",
     fontSize: 12,
   },
   selectionBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 4,
     right: 4,
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#FF0050',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#FF0050",
+    justifyContent: "center",
+    alignItems: "center",
   },
   selectionNumber: {
-    color: 'white',
+    color: "white",
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   cameraContainer: {
     flex: 1,
@@ -599,5 +619,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5, // for Android
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginLeft: 16,
   },
 });

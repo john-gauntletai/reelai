@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, Modal, ActivityIndicator, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, Modal, ActivityIndicator, FlatList, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../store';
 import { useState, useEffect } from 'react';
@@ -65,7 +65,6 @@ export default function ProfileScreen() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      router.replace('/');
     } catch (error) {
       console.error('Error signing out:', error);
     }
@@ -88,7 +87,7 @@ export default function ProfileScreen() {
       }}
     >
       <Video
-        source={{ uri: item.uri }}
+        source={{ uri: item.videoUrl }}
         style={styles.thumbnailVideo}
         resizeMode="cover"
         shouldPlay={false}
@@ -135,7 +134,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         {/* Header */}
         <View style={styles.header}>
@@ -262,7 +261,7 @@ export default function ProfileScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -284,7 +283,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    paddingTop: 60,
   },
   username: {
     color: 'white',

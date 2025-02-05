@@ -20,6 +20,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         auth,
         (user) => {
           console.log('Auth state changed:', user?.email);
+          console.log('User:', user);
           set({ user, isLoading: false, error: null });
         },
         (error) => {

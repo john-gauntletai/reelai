@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Dimensions, ActivityIndicator, SafeAreaView } from 'react-native';
 import { ResizeMode, Video } from 'expo-av';
 import { router, useLocalSearchParams } from 'expo-router';
 import Draggable from 'react-native-draggable';
@@ -13,7 +13,10 @@ interface TextOverlay {
 }
 
 export default function EditScreen() {
-  const { uri } = useLocalSearchParams<{ uri: string }>();
+  const { uri, originalVideoId } = useLocalSearchParams<{ 
+    uri: string;
+    originalVideoId?: string;
+  }>();
   const [textOverlays, setTextOverlays] = useState<TextOverlay[]>([]);
   const [currentText, setCurrentText] = useState('');
 
@@ -32,7 +35,7 @@ export default function EditScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Video
         source={{ uri }}
         style={styles.video}
@@ -75,14 +78,17 @@ export default function EditScreen() {
         style={styles.nextButton}
         onPress={() => {
           router.push({
-            pathname: '/savepost',
-            params: { uri }
+            pathname: '/save-post',
+            params: { 
+              uri,
+              originalVideoId
+            }
           });
         }}
       >
         <Text style={styles.nextButtonText}>Next</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
