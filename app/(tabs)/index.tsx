@@ -1,5 +1,4 @@
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ActivityIndicator, FlatList, StatusBar } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { useState, useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +7,7 @@ import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 
 const { width, height } = Dimensions.get('window');
+const videoHeight = height - 54;
 
 interface VideoPost {
   id: string;
@@ -68,8 +68,7 @@ export default function HomeScreen() {
           style={styles.video}
           source={{ uri: item.videoUrl }}
           onPlaybackStatusUpdate={(status) => handleVideoPlaybackStatusUpdate(status, item.id)}
-          resizeMode="cover"
-          // isLooping
+          resizeMode={ResizeMode.COVER}
           shouldPlay={index === activeVideoIndex}
         />
         
@@ -78,18 +77,28 @@ export default function HomeScreen() {
           {/* Right sidebar */}
           <View style={styles.rightSidebar}>
             <TouchableOpacity style={styles.sidebarButton}>
-              <Ionicons name="heart-outline" size={35} color="white" />
+              <Ionicons name="heart" size={35} color="rgba(255, 255, 255, 0.9)" style={styles.iconShadow} />
               <Text style={styles.sidebarText}>{item.likes || 0}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.sidebarButton}>
-              <Ionicons name="eye-outline" size={35} color="white" />
-              <Text style={styles.sidebarText}>{item.views || 0}</Text>
+              <Ionicons name="chatbubble-ellipses" size={35} color="rgba(255, 255, 255, 0.9)" style={styles.iconShadow} />
+              <Text style={styles.sidebarText}>{item.comments || 0}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.sidebarButton}>
-              <Ionicons name="share-social-outline" size={35} color="white" />
+              <Ionicons name="bookmark" size={35} color="rgba(255, 255, 255, 0.9)" style={styles.iconShadow} />
+              <Text style={styles.sidebarText}>{item.saves || 0}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.sidebarButton}>
+              <Ionicons name="arrow-redo" size={35} color="rgba(255, 255, 255, 0.9)" style={styles.iconShadow} />
               <Text style={styles.sidebarText}>Share</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.sidebarButton}>
+              <Ionicons name="paper-plane" size={35} color="rgba(255, 255, 255, 0.9)" style={styles.iconShadow} />
+              <Text style={styles.sidebarText}>Apply</Text>
             </TouchableOpacity>
           </View>
 
@@ -114,7 +123,8 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="white" />
@@ -124,17 +134,22 @@ export default function HomeScreen() {
           <Text style={styles.emptyText}>No videos yet</Text>
         </View>
       ) : (
-        <FlashList
+        <FlatList
           data={videos}
           renderItem={renderVideo}
-          estimatedItemSize={height}
+          keyExtractor={(item) => item.id}
           pagingEnabled
           showsVerticalScrollIndicator={false}
-          viewabilityConfig={viewabilityConfig}
           onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          getItemLayout={(data, index) => ({
+            length: videoHeight,
+            offset: videoHeight * index,
+            index,
+          })}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -160,12 +175,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'black',
   },
   videoContainer: {
-    width: width,
-    height: height,
+    flex: 1,
     backgroundColor: 'black',
   },
   video: {
-    flex: 1,
+    width: width,
+    height: videoHeight,
     backgroundColor: 'black',
   },
   overlay: {
@@ -205,5 +220,10 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     marginBottom: 20,
+  },
+  iconShadow: {
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
   },
 });

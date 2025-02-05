@@ -232,6 +232,17 @@ export default function ProfileScreen() {
                 // Add navigation to settings here
               }}
             >
+              <Ionicons name="bar-chart-outline" size={24} color="white" />
+              <Text style={styles.modalOptionText}>Dashboard</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.modalOption}
+              onPress={() => {
+                setIsModalVisible(false);
+                // Add navigation to settings here
+              }}
+            >
               <Ionicons name="settings-outline" size={24} color="white" />
               <Text style={styles.modalOptionText}>Settings and privacy</Text>
             </TouchableOpacity>
