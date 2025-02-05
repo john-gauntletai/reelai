@@ -63,7 +63,6 @@ export default function Create() {
     setHasCameraPermission(cameraStatus.status === "granted");
     setHasAudioPermission(audioStatus.status === "granted");
     setHasGalleryPermission(galleryStatus.status === "granted");
-    console.log('permissions granted', hasCameraPermission, hasAudioPermission, hasGalleryPermission);
     if (galleryStatus.status === "granted") {
       // const userGalleryMedia = await MediaLibrary.getAssetsAsync({
       //   sortBy: ["creationTime"],
@@ -105,7 +104,10 @@ export default function Create() {
     }
     setIsRecording(true);
     const video = await cameraRef.current?.recordAsync();
-    
+    if (video) {
+      console.log("Recording finished:", video.uri);
+      router.push({ pathname: '/edit', params: { uri: video.uri } });
+    }
   };
 
   if (!hasCameraPermission || !hasAudioPermission || !hasGalleryPermission) {
@@ -170,7 +172,7 @@ export default function Create() {
               </TouchableOpacity>
 
               <View style={styles.rightControlsColumn}>
-                <TouchableOpacity style={styles.rightControlButton}>
+                <TouchableOpacity style={styles.rightControlButton} onPress={handleFlipCamera}>
                   <Ionicons
                     name="sync"
                     size={30}
