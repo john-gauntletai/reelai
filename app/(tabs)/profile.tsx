@@ -1,12 +1,13 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, Modal, ActivityIndicator, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../store';
 import { useState, useEffect } from 'react';
-import { doc, getDoc, getFirestore } from 'firebase/firestore';
+import { doc, getDoc, getFirestore, collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
-import { auth } from '../../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
 import { router } from 'expo-router';
-import type { UserProfile } from '../../types';
+import type { UserProfile, Video as VideoType } from '../../types';
+import { Video } from 'expo-av';
 
 const { width } = Dimensions.get('window');
 const THUMBNAIL_SIZE = width / 3;
@@ -16,6 +17,8 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [selectedTab, setSelectedTab] = useState('videos');
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [userVideos, setUserVideos] = useState<VideoType[]>([]);
+  const [loadingVideos, setLoadingVideos] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -29,7 +32,34 @@ export default function ProfileScreen() {
       }
     };
 
+    const fetchUserVideos = async () => {
+      if (user) {
+        try {
+          setLoadingVideos(true);
+          console.log(user.uid);
+          const videosQuery = query(
+            collection(db, 'videos'),
+            where('userId', '==', user.uid),
+            limit(10)
+          );
+          
+          const querySnapshot = await getDocs(videosQuery);
+          const videos = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as VideoType[];
+
+          setUserVideos(videos);
+        } catch (error) {
+          console.error('Error fetching user videos:', error);
+        } finally {
+          setLoadingVideos(false);
+        }
+      }
+    };
+
     fetchProfile();
+    fetchUserVideos();
   }, [user]);
 
   const handleSignOut = async () => {
@@ -48,6 +78,61 @@ export default function ProfileScreen() {
       </View>
     );
   }
+
+  const renderVideoThumbnail = ({ item }: { item: VideoType }) => (
+    <TouchableOpacity 
+      style={styles.videoThumbnail}
+      onPress={() => {
+        // Handle video press - maybe navigate to video detail/player
+        // router.push(`/video/${item.id}`);
+      }}
+    >
+      <Video
+        source={{ uri: item.uri }}
+        style={styles.thumbnailVideo}
+        resizeMode="cover"
+        shouldPlay={false}
+        isMuted={true}
+        positionMillis={0}
+      />
+      <View style={styles.videoStats}>
+        <Ionicons name="play" size={12} color="white" />
+        <Text style={styles.videoStatsText}>
+          {item.views?.toLocaleString() || 0}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderVideoGrid = () => {
+    if (loadingVideos) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color="#FE2C55" />
+        </View>
+      );
+    }
+
+    if (userVideos.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="videocam-outline" size={48} color="#666" />
+          <Text style={styles.emptyText}>No videos yet</Text>
+        </View>
+      );
+    }
+
+    return (
+      <FlatList
+        data={userVideos}
+        renderItem={renderVideoThumbnail}
+        numColumns={3}
+        keyExtractor={item => item.id}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.videoGrid}
+      />
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -120,15 +205,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Video Grid */}
-        <View style={styles.videoGrid}>
-          {/* Add your video thumbnails here */}
-          {/* This is a placeholder for the video grid */}
-          {[...Array(9)].map((_, index) => (
-            <View key={index} style={styles.videoThumbnail}>
-              <Text style={styles.thumbnailText}>Video {index + 1}</Text>
-            </View>
-          ))}
-        </View>
+        {selectedTab === 'videos' && renderVideoGrid()}
       </ScrollView>
 
       {/* Bottom Sheet Modal */}
@@ -271,19 +348,30 @@ const styles = StyleSheet.create({
     borderBottomColor: '#FE2C55',
   },
   videoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    padding: 1,
   },
   videoThumbnail: {
-    width: THUMBNAIL_SIZE,
-    height: THUMBNAIL_SIZE,
-    borderWidth: 0.5,
-    borderColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flex: 1/3,
+    aspectRatio: 0.8,
+    margin: 1,
+    backgroundColor: '#222',
+    position: 'relative',
   },
-  thumbnailText: {
-    color: '#666',
+  thumbnailVideo: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  videoStats: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  videoStatsText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
   },
   modalOverlay: {
     flex: 1,
@@ -318,5 +406,22 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#FE2C55',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    color: '#666',
+    marginTop: 12,
+    fontSize: 14,
   },
 });

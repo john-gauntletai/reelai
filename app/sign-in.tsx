@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Text, View, TextInput, TouchableOpacity, SafeAreaView } from "react-native";
+import { Text, View, TextInput, TouchableOpacity, SafeAreaView, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, getFirestore, setDoc } from 'firebase/firestore';
@@ -40,21 +40,21 @@ export default function SignIn() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-black">
+    <SafeAreaView style={styles.container}>
       <TouchableOpacity 
-        className="p-5"
+        style={styles.backButton}
         onPress={() => router.back()}
       >
-        <Text className="text-white text-2xl">←</Text>
+        <Text style={styles.backButtonText}>←</Text>
       </TouchableOpacity>
 
-      <View className="flex-1 px-5 gap-5">
-        <Text className="text-2xl font-bold text-white mb-5 text-center">
+      <View style={styles.content}>
+        <Text style={styles.title}>
           Log in
         </Text>
         
         <TextInput
-          className="h-11 border-b border-b-zinc-700 text-white text-base"
+          style={styles.input}
           placeholder="Email"
           placeholderTextColor="#666"
           value={email}
@@ -64,7 +64,7 @@ export default function SignIn() {
         />
 
         <TextInput
-          className="h-11 border-b border-b-zinc-700 text-white text-base"
+          style={styles.input}
           placeholder="Password"
           placeholderTextColor="#666"
           value={password}
@@ -73,28 +73,91 @@ export default function SignIn() {
         />
 
         {error ? (
-          <Text className="text-[#FE2C55] text-sm">
+          <Text style={styles.errorText}>
             {error}
           </Text>
         ) : null}
 
         <TouchableOpacity 
-          className={`h-11 rounded bg-[#FE2C55] justify-center items-center mt-5 
-            ${(!email || !password) ? 'opacity-50' : ''}`}
+          style={[
+            styles.loginButton,
+            (!email || !password) && styles.loginButtonDisabled
+          ]}
           onPress={handleSignIn}
           disabled={!email || !password}
         >
-          <Text className="text-white text-base font-semibold">
+          <Text style={styles.loginButtonText}>
             Log in
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity className="items-center mt-5">
-          <Text className="text-[#FE2C55] text-sm">
+        <TouchableOpacity style={styles.forgotPasswordButton}>
+          <Text style={styles.forgotPasswordText}>
             Forgot password?
           </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'black',
+  },
+  backButton: {
+    padding: 20,
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 24,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    gap: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  input: {
+    height: 44,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    color: 'white',
+    fontSize: 16,
+  },
+  errorText: {
+    color: '#FE2C55',
+    fontSize: 14,
+  },
+  loginButton: {
+    height: 44,
+    borderRadius: 4,
+    backgroundColor: '#FE2C55',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  loginButtonDisabled: {
+    opacity: 0.5,
+  },
+  loginButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  forgotPasswordButton: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  forgotPasswordText: {
+    color: '#FE2C55',
+    fontSize: 14,
+  },
+}); 
