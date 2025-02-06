@@ -48,6 +48,7 @@ export interface Video {
   isActive: boolean; // If the video is active/deleted
   originalVideoId?: string; // if the video is a submission
   submissions: number; // Count of submissions
+  submissionStatus: "pending" | "accepted" | "rejected"; // Status of the submission
 }
 
 // Comment

@@ -176,8 +176,8 @@ export default function HomeFeed() {
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
           getItemLayout={(data, index) => ({
-            length: videoHeight,
-            offset: videoHeight * index,
+            length: height,
+            offset: height * index,
             index,
           })}
         />

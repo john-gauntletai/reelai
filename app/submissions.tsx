@@ -100,7 +100,7 @@ export default function SubmissionsScreen() {
           pathname: '/submissions-feed',
           params: { 
             originalVideoId: videoId as string,
-            startingVideoId: item.id 
+            startingVideoId: item.id,
           }
         });
       }}
@@ -124,7 +124,7 @@ export default function SubmissionsScreen() {
           @{userInfoCache[item.userId]?.username || item.userId.slice(0, 8)}
         </Text>
         <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+          <Text style={styles.statusText}>{item.submissionStatus.toUpperCase()}</Text>
         </View>
       </View>
     </TouchableOpacity>

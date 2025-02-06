@@ -12,7 +12,7 @@ import { Video, ResizeMode } from "expo-av";
 import { useState, useRef, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import { router, useLocalSearchParams } from "expo-router";
 import { useAuthStore } from "./store";
@@ -76,6 +76,22 @@ export default function SubmissionsFeed() {
     }
   };
 
+  const handleAcceptSubmission = async (submission: VideoType) => {
+    await updateDoc(doc(db, "videos", submission.id), {
+      submissionStatus: "accepted",
+    });
+    setSubmissions(submissions.map(v => v.id === submission.id ? { ...v, submissionStatus: "accepted" } : v));
+    console.log("Submission accepted");
+  };
+
+  const handleRejectSubmission = async (submission: VideoType) => {
+    await updateDoc(doc(db, "videos", submission.id), {
+      submissionStatus: "rejected",
+    });
+    setSubmissions(submissions.map(v => v.id === submission.id ? { ...v, submissionStatus: "rejected" } : v));
+    console.log("Submission rejected");
+  };
+
   const renderVideo = ({ item, index }: { item: VideoType; index: number }) => {
     const isOriginalCreator = originalVideo?.userId === user?.uid;
 
@@ -101,16 +117,30 @@ export default function SubmissionsFeed() {
                   style={styles.sidebarButton}
                   onPress={() => handleAcceptSubmission(item)}
                 >
-                  <Ionicons name="checkmark-circle" size={35} style={styles.rightIcon} />
-                  <Text style={styles.sidebarText}>Accept</Text>
+                  <Ionicons 
+                    name="checkmark-circle" 
+                    size={35} 
+                    style={[
+                      styles.rightIcon,
+                      item.submissionStatus === 'accepted' && styles.activeAcceptIcon
+                    ]} 
+                  />
+                  <Text style={styles.sidebarText}>{item.submissionStatus === 'accepted' ? 'Accepted' : 'Accept'}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
                   style={styles.sidebarButton}
                   onPress={() => handleRejectSubmission(item)}
                 >
-                  <Ionicons name="close-circle" size={35} style={styles.rightIcon} />
-                  <Text style={styles.sidebarText}>Reject</Text>
+                  <Ionicons 
+                    name="close-circle" 
+                    size={35} 
+                    style={[
+                      styles.rightIcon,
+                      item.submissionStatus === 'rejected' && styles.activeRejectIcon
+                    ]} 
+                  />
+                  <Text style={styles.sidebarText}>{item.submissionStatus === 'rejected' ? 'Rejected' : 'Reject'}</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -125,7 +155,6 @@ export default function SubmissionsFeed() {
           <View style={styles.bottomContent}>
             <Text style={styles.username}>@{item.userId.slice(0, 8)}</Text>
             <Text style={styles.description}>{item.description}</Text>
-            <Text style={styles.submissionStatus}>Status: {item.status}</Text>
           </View>
         </View>
       </View>
@@ -252,5 +281,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  activeAcceptIcon: {
+    color: '#4CAF50', // Green color for accepted
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
+  },
+  activeRejectIcon: {
+    color: '#FF3B30', // Red color for rejected
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
+  },
+  acceptedStatus: {
+    color: '#4CAF50',
+  },
+  rejectedStatus: {
+    color: '#FF3B30',
   },
 });

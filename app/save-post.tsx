@@ -80,8 +80,7 @@ export default function SavePost() {
           if (originalVideoId) {
             Object.assign(videoData, {
               originalVideoId,
-              status: "pending",
-              type: "submission",
+              submissionStatus: "pending",
             });
           }
 
