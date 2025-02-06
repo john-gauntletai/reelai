@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   },
   rightSidebar: {
     width: 50,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
   },
   sidebarButton: {
@@ -226,25 +226,30 @@ const styles = StyleSheet.create({
   },
   sidebarText: {
     color: 'white',
-    fontSize: 12,
-    marginTop: 5,
+    fontWeight: 'semibold',
+    fontSize: 14,
+    marginTop: 2,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
   },
   bottomContent: {
     position: 'absolute',
     bottom: 0,
     left: 0,
-    padding: 10,
+    paddingHorizontal: 10,
   },
   username: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 18,
     marginBottom: 10,
   },
   description: {
     color: 'white',
-    fontSize: 14,
-    marginBottom: 20,
+    fontSize: 16,
+    marginBottom: 10,
+    paddingRight: 100,
   },
   rightIcon: {
     color: 'rgba(255, 255, 255, 0.9)',
