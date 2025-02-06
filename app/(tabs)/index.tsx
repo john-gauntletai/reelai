@@ -2,14 +2,13 @@ import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ActivityIndicator
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { useState, useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { router } from 'expo-router';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useAuthStore } from '../store';
 
 const { width, height } = Dimensions.get('window');
-const videoHeight = height - 54;
 
 interface VideoPost {
   id: string;
@@ -23,6 +22,7 @@ interface VideoPost {
 }
 
 export default function HomeFeed() {
+  const tabBarHeight = useBottomTabBarHeight();
   const [videos, setVideos] = useState<VideoPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
@@ -87,7 +87,7 @@ export default function HomeFeed() {
       <View style={styles.videoContainer}>
         <Video
           ref={(ref) => ref && (videoRefs.current[item.id] = ref)}
-          style={styles.video}
+          style={{...styles.video, height: height - tabBarHeight}}
           source={{ uri: item.videoUrl }}
           onPlaybackStatusUpdate={(status) => handleVideoPlaybackStatusUpdate(status, item.id)}
           resizeMode={ResizeMode.COVER}
@@ -130,7 +130,7 @@ export default function HomeFeed() {
                   item.userId === user?.uid && styles.activeIcon
                 ]} 
               />
-              <Text style={styles.sidebarText}>{item.applications || 0}</Text>
+              <Text style={styles.sidebarText}>{item.submissions || 0}</Text>
             </TouchableOpacity>
 
           </View>
@@ -175,11 +175,6 @@ export default function HomeFeed() {
           showsVerticalScrollIndicator={false}
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
-          getItemLayout={(data, index) => ({
-            length: height,
-            offset: height * index,
-            index,
-          })}
         />
       )}
     </View>
@@ -213,7 +208,6 @@ const styles = StyleSheet.create({
   },
   video: {
     width: width,
-    height: videoHeight,
     backgroundColor: 'black',
   },
   overlay: {
@@ -222,7 +216,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   rightSidebar: {
-    width: 80,
+    width: 50,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -239,8 +233,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     left: 0,
-    right: 80,
-    padding: 20,
+    padding: 10,
   },
   username: {
     color: 'white',

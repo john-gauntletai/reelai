@@ -11,7 +11,6 @@ import {
 import { Video, ResizeMode } from "expo-av";
 import { useState, useRef, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { collection, query, where, getDocs, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import { router, useLocalSearchParams } from "expo-router";
